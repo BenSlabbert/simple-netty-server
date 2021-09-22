@@ -10,6 +10,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
 import org.apache.log4j.Logger;
 import org.example.netty.protocol.PingRequest;
 import org.example.netty.protocol.Request;
@@ -29,19 +30,19 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
 
   @Override
   public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-    LOG.info(String.format("thread id: %d channel registered", Thread.currentThread().getId()));
+    LOG.info("channel registered\"");
     super.channelRegistered(ctx);
   }
 
   @Override
   public void channelActive(ChannelHandlerContext ctx) throws Exception {
-    LOG.info(String.format("thread id: %d channel active", Thread.currentThread().getId()));
+    LOG.info("channel active");
     super.channelActive(ctx);
   }
 
   @Override
   public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-    LOG.info(String.format("thread id: %d channel read complete", Thread.currentThread().getId()));
+    LOG.info("channel read complete");
     // come here when the decoder returns without adding to List<Object> out
     // i.e. channel has completed its read, there may be more data coming
     super.channelReadComplete(ctx);
@@ -49,18 +50,20 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
 
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) {
-    LOG.info(String.format("thread id: %d channel read start", Thread.currentThread().getId()));
-    var resp = handleRequest((Request) msg);
+    LOG.info("channel read start");
 
-    // this call to write will call all the ChannelOutboundHandlerAdapter(s)
-    ctx.writeAndFlush(resp)
-        .addListener(
-            new ChannelFutureListener() {
-              @Override
-              public void operationComplete(ChannelFuture channelFuture) throws Exception {
-                LOG.info("finished write to client");
-              }
-            });
+    CompletableFuture.supplyAsync(() -> handleRequest((Request) msg))
+        .thenApply(
+            resp ->
+                ctx.writeAndFlush(resp)
+                    .addListener(
+                        new ChannelFutureListener() {
+                          @Override
+                          public void operationComplete(ChannelFuture channelFuture)
+                              throws Exception {
+                            LOG.info("finished write to client");
+                          }
+                        }));
   }
 
   @Override
@@ -78,6 +81,7 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
   }
 
   private Response handlePing(Request request) {
+    LOG.info("handle ping");
     Reader reader = new InputStreamReader(new ByteArrayInputStream(request.payload()));
     PingRequest pingRequest = GSON.fromJson(reader, new TypeToken<PingRequest>() {}.getType());
     LOG.info("ping request message: " + pingRequest.getMessage());

@@ -14,13 +14,13 @@ public class RequestDecoder extends ByteToMessageDecoder {
 
   @Override
   public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-    LOG.info(String.format("thread id: %d channel registered", Thread.currentThread().getId()));
+    LOG.info("channel registered");
     super.channelRegistered(ctx);
   }
 
   @Override
   public void channelActive(ChannelHandlerContext ctx) throws Exception {
-    LOG.info(String.format("thread id: %d channel active", Thread.currentThread().getId()));
+    LOG.info("channel active");
     super.channelActive(ctx);
   }
 
@@ -32,7 +32,7 @@ public class RequestDecoder extends ByteToMessageDecoder {
 
   @Override
   public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-    LOG.info(String.format("thread id: %d channel read complete", Thread.currentThread().getId()));
+    LOG.info("channel read complete");
     super.channelReadComplete(ctx);
   }
 
@@ -44,7 +44,10 @@ public class RequestDecoder extends ByteToMessageDecoder {
     }
 
     // subtract 4, the first 4 are is the message length
-    int payloadLength = in.readBytes(4).readInt() - 4;
+    var buf = in.readBytes(4);
+    int payloadLength = buf.readInt() - 4;
+    buf.release();
+
     if (readableBytes < payloadLength) {
       in.resetReaderIndex();
       return; // call me again with more data
@@ -52,7 +55,10 @@ public class RequestDecoder extends ByteToMessageDecoder {
 
     // we now have the whole message, deserialize it
 
-    int msgType = in.readBytes(4).readInt();
+    buf = in.readBytes(4);
+    int msgType = buf.readInt();
+    buf.release();
+
     var requestType = RequestType.fromId(msgType);
     var msgBytes = new byte[payloadLength];
 

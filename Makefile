@@ -29,7 +29,7 @@ clean:
 	@ mvn clean
 
 runClient:
-	@ java -jar ./target/client-all-1.0-SNAPSHOT.jar
+	@ java -Dio.netty.leakDetectionLevel=ADVANCED -XX:+UseZGC -Xlog:gc -Xmx32m -Xms32m -jar ./target/client-all-1.0-SNAPSHOT.jar
 
 runServer:
-	@ java -jar ./target/server-all-1.0-SNAPSHOT.jar
+	@ java -Dio.netty.leakDetectionLevel=ADVANCED -XX:+UseZGC -Xlog:gc -Xmx32m -Xms32m -jar ./target/server-all-1.0-SNAPSHOT.jar

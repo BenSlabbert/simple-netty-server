@@ -14,13 +14,13 @@ public class ResponseDecoder extends ByteToMessageDecoder {
 
   @Override
   public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-    LOG.info(String.format("thread id: %d channel registered", Thread.currentThread().getId()));
+    LOG.info("channel registered");
     super.channelRegistered(ctx);
   }
 
   @Override
   public void channelActive(ChannelHandlerContext ctx) throws Exception {
-    LOG.info(String.format("thread id: %d channel active", Thread.currentThread().getId()));
+    LOG.info("channel active");
     super.channelActive(ctx);
   }
 
@@ -32,7 +32,7 @@ public class ResponseDecoder extends ByteToMessageDecoder {
 
   @Override
   public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-    LOG.info(String.format("thread id: %d channel read complete", Thread.currentThread().getId()));
+    LOG.info("channel read complete");
     super.channelReadComplete(ctx);
   }
 

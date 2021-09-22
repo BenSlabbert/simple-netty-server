@@ -52,5 +52,7 @@ public class Main {
       LOG.info("shutting down worker group");
       workerGroup.shutdownGracefully();
     }
+
+    LOG.info("exit");
   }
 }

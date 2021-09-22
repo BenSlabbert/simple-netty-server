@@ -8,6 +8,10 @@ import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.IdleStateHandler;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
+import org.apache.log4j.Logger;
 import org.example.netty.common.MyThreadFactory;
 import org.example.netty.server.handler.inbound.BusinessLogicHandler;
 import org.example.netty.server.handler.inbound.PreMessageDecoder;
@@ -17,36 +21,41 @@ import org.example.netty.server.handler.outbound.ResponseEncoder;
 
 public class Main {
 
+  private static final Logger LOG = Logger.getLogger(Main.class);
+
   public static void main(String[] args) throws Exception {
 
-    var bossGroup = new EpollEventLoopGroup(2, new MyThreadFactory("boss"));
-    var workerGroup = new EpollEventLoopGroup(2, new MyThreadFactory("worker"));
+    var bossGroup = new EpollEventLoopGroup(1, new MyThreadFactory("boss"));
+    var childGroup = new EpollEventLoopGroup(2, new MyThreadFactory("child"));
 
     try {
       ServerBootstrap b = new ServerBootstrap();
-      b.group(bossGroup, workerGroup)
+      b.group(bossGroup, childGroup)
           .channel(EpollServerSocketChannel.class)
           .handler(new LoggingHandler(LogLevel.INFO))
           .childHandler(
               new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(SocketChannel ch) {
-                  // https://netty.io/4.1/api/io/netty/channel/ChannelPipeline.html
-                  // we can specify and executor group to run the handler in a different thread pool
-                  // so we do not block I/O
                   var p = ch.pipeline();
+                  p.addLast("ideStateHandler", new IdleStateHandler(10, 10, 10));
                   // outbound handlers after inbound handlers
-                  p.addLast(new ResponseEncoder());
-                  p.addLast(new PreEncoderHandler());
+                  p.addLast("responseEncoder", new ResponseEncoder());
+                  p.addLast("preEncoderHandler", new PreEncoderHandler());
 
-                  p.addLast(new PreMessageDecoder());
-                  p.addLast(new RequestDecoder());
+                  p.addLast("preMessageDecoder", new PreMessageDecoder());
+                  p.addLast("requestDecoder", new RequestDecoder());
 
                   // todo play with this guy, make sure he is in the right place
                   //  come back and play with ChunkedStream
                   //  our messages are small for now
                   //                  p.addLast(new ChunkedWriteHandler());
-                  p.addLast(new BusinessLogicHandler());
+
+                  // https://netty.io/4.1/api/io/netty/channel/ChannelPipeline.html
+                  // we can specify and executor group to run the handler in a different thread pool
+                  // so we do not block I/O
+
+                  p.addLast("businessLogicHandler", new BusinessLogicHandler());
                 }
               });
 
@@ -58,8 +67,15 @@ public class Main {
       // shut down your server.
       f.channel().closeFuture().sync();
     } finally {
-      workerGroup.shutdownGracefully();
+      if (ForkJoinPool.commonPool().awaitQuiescence(10L, TimeUnit.SECONDS)) {
+        LOG.info("ForkJoinPool.commonPool stopped all tasks");
+      } else {
+        LOG.warn("not able to complete all tasks");
+      }
+      childGroup.shutdownGracefully();
       bossGroup.shutdownGracefully();
     }
+
+    LOG.info("exit");
   }
 }
