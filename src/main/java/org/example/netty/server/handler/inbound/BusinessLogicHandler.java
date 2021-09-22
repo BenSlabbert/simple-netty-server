@@ -2,8 +2,8 @@ package org.example.netty.server.handler.inbound;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.async.RedisStringAsyncCommands;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import java.io.ByteArrayInputStream;
@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import org.apache.log4j.Logger;
 import org.example.netty.protocol.PingRequest;
+import org.example.netty.protocol.PingResponse;
 import org.example.netty.protocol.Request;
 import org.example.netty.protocol.Response;
 import org.example.netty.protocol.ResponseType;
@@ -22,6 +23,19 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
   private static final Logger LOG = Logger.getLogger(BusinessLogicHandler.class);
   private static final Gson GSON = new Gson();
 
+  private final RedisStringAsyncCommands<String, byte[]> async;
+
+  public BusinessLogicHandler(StatefulRedisConnection<String, byte[]> connection) {
+    this.async = connection.async();
+    //        RedisFuture<String> set = async.set("key", "value".getBytes(StandardCharsets.UTF_8));
+    //        RedisFuture<byte[]> get = async.get("key");
+    //
+    //        boolean allCompleted = LettuceFutures.awaitAll(Duration.ofMillis(500L), set, get);
+    //        LOG.info("allCompleted: " + allCompleted);
+    //        String s = set.get();
+    //        byte[] s1 = get.get();
+  }
+
   @Override
   public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
     LOG.info("client disconnected");
@@ -30,7 +44,7 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
 
   @Override
   public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-    LOG.info("channel registered\"");
+    LOG.info("channel registered");
     super.channelRegistered(ctx);
   }
 
@@ -51,28 +65,20 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) {
     LOG.info("channel read start");
-
-    CompletableFuture.supplyAsync(() -> handleRequest((Request) msg))
+    handleRequest((Request) msg)
         .thenApply(
             resp ->
                 ctx.writeAndFlush(resp)
-                    .addListener(
-                        new ChannelFutureListener() {
-                          @Override
-                          public void operationComplete(ChannelFuture channelFuture)
-                              throws Exception {
-                            LOG.info("finished write to client");
-                          }
-                        }));
+                    .addListener(channelFuture -> LOG.info("finished write to client")));
   }
 
   @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
     cause.printStackTrace();
     ctx.close();
   }
 
-  private Response handleRequest(Request request) {
+  private CompletableFuture<Response> handleRequest(Request request) {
     LOG.info("got request type: " + request.type());
     return switch (request.type()) {
       case PING_REQUEST -> handlePing(request);
@@ -80,11 +86,21 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
     };
   }
 
-  private Response handlePing(Request request) {
-    LOG.info("handle ping");
+  private CompletableFuture<Response> handlePing(Request request) {
+    return CompletableFuture.supplyAsync(
+        () -> {
+          LOG.info("handle ping");
+          var pingRequest = parseJson(request, PingRequest.TYPE_TOKEN);
+          LOG.info("ping request message: " + pingRequest.getMessage());
+
+          var pingResponse = new PingResponse().message("pong!");
+          var json = GSON.toJson(pingResponse);
+          return new Response(ResponseType.PING_RESPONSE, json.getBytes(StandardCharsets.UTF_8));
+        });
+  }
+
+  private <T> T parseJson(Request request, TypeToken<T> tTypeToken) {
     Reader reader = new InputStreamReader(new ByteArrayInputStream(request.payload()));
-    PingRequest pingRequest = GSON.fromJson(reader, new TypeToken<PingRequest>() {}.getType());
-    LOG.info("ping request message: " + pingRequest.getMessage());
-    return new Response(ResponseType.PING_RESPONSE, "pong!".getBytes(StandardCharsets.UTF_8));
+    return GSON.fromJson(reader, tTypeToken.getType());
   }
 }

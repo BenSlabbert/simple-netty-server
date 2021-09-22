@@ -44,7 +44,10 @@ public class ResponseDecoder extends ByteToMessageDecoder {
     }
 
     // subtract 4, the first 4 are is the message length
-    int payloadLength = in.readBytes(4).readInt() - 4;
+    var buf = in.readBytes(4);
+    int payloadLength = buf.readInt() - 4;
+    buf.release();
+
     if (readableBytes < payloadLength) {
       in.resetReaderIndex();
       return; // call me again with more data
@@ -52,7 +55,10 @@ public class ResponseDecoder extends ByteToMessageDecoder {
 
     // we now have the whole message, deserialize it
 
-    int msgType = in.readBytes(4).readInt();
+    buf = in.readBytes(4);
+    int msgType = buf.readInt();
+    buf.release();
+
     var requestType = ResponseType.fromId(msgType);
     var msgBytes = new byte[payloadLength];
 

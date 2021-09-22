@@ -1,5 +1,10 @@
 package org.example.netty.server;
 
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.codec.ByteArrayCodec;
+import io.lettuce.core.codec.RedisCodec;
+import io.lettuce.core.codec.StringCodec;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -24,6 +29,10 @@ public class Main {
   private static final Logger LOG = Logger.getLogger(Main.class);
 
   public static void main(String[] args) throws Exception {
+
+    RedisClient client = RedisClient.create("redis://localhost");
+    StatefulRedisConnection<String, byte[]> connection =
+        client.connect(RedisCodec.of(new StringCodec(), new ByteArrayCodec()));
 
     var bossGroup = new EpollEventLoopGroup(1, new MyThreadFactory("boss"));
     var childGroup = new EpollEventLoopGroup(2, new MyThreadFactory("child"));
@@ -55,7 +64,7 @@ public class Main {
                   // we can specify and executor group to run the handler in a different thread pool
                   // so we do not block I/O
 
-                  p.addLast("businessLogicHandler", new BusinessLogicHandler());
+                  p.addLast("businessLogicHandler", new BusinessLogicHandler(connection));
                 }
               });
 
@@ -72,6 +81,8 @@ public class Main {
       } else {
         LOG.warn("not able to complete all tasks");
       }
+
+      connection.close();
       childGroup.shutdownGracefully();
       bossGroup.shutdownGracefully();
     }
