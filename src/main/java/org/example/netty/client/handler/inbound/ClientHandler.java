@@ -1,8 +1,6 @@
 package org.example.netty.client.handler.inbound;
 
 import com.google.gson.Gson;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -11,9 +9,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
 import org.example.netty.protocol.PingRequest;
+import org.example.netty.protocol.Request;
 import org.example.netty.protocol.RequestType;
+import org.example.netty.protocol.Response;
 
-public class ClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
+public class ClientHandler extends SimpleChannelInboundHandler<Response> {
 
   private static final Logger logger = Logger.getLogger(ClientHandler.class);
   private static final AtomicInteger COUNT = new AtomicInteger(0);
@@ -31,12 +31,15 @@ public class ClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
   }
 
   @Override
-  protected void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
+  protected void channelRead0(ChannelHandlerContext ctx, Response in) {
     // this is a convenience method which discards the ByteBuf for us
     logger.info("channelRead0");
 
-    String s = in.toString(StandardCharsets.UTF_8);
-    logger.info("resp: " + s);
+    logger.info(
+        "respType: "
+            + in.type()
+            + " respBody: "
+            + new String(in.payload(), StandardCharsets.UTF_8));
 
     logger.info("send another ping");
     sendPing(ctx);
@@ -63,18 +66,8 @@ public class ClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
       return;
     }
 
-    var msgBytes = new Gson().toJson(new PingRequest("hello")).getBytes(StandardCharsets.UTF_8);
-
-    ByteBuf buffer = Unpooled.buffer();
-    buffer.writeInt(4 + msgBytes.length);
-    buffer.writeInt(RequestType.PING_REQUEST.getIdx());
-    buffer.writeBytes(msgBytes);
-
-    logger.info("msg length: " + (4 + msgBytes.length));
-    logger.info("msg type: " + RequestType.PING_REQUEST.getIdx());
-    logger.info("payload length: " + msgBytes.length);
-
-    ctx.write(buffer);
-    ctx.flush();
+    var msgBytes =
+        new Gson().toJson(new PingRequest("hello-" + i)).getBytes(StandardCharsets.UTF_8);
+    ctx.writeAndFlush(new Request(RequestType.PING_REQUEST, msgBytes));
   }
 }

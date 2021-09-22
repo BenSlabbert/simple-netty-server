@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.MessageToByteEncoder;
-import java.nio.ByteBuffer;
 import org.apache.log4j.Logger;
 import org.example.netty.protocol.Response;
 
@@ -24,7 +23,7 @@ public class ResponseEncoder extends MessageToByteEncoder<Response> {
     logger.info("encoding message");
 
     out.writeInt(4 + msg.payload().length);
-    out.writeBytes(ByteBuffer.allocate(4).putInt(msg.type().getIdx()).array());
+    out.writeInt(msg.type().getId());
     out.writeBytes(msg.payload());
   }
 }

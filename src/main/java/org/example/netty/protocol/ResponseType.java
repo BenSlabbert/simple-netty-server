@@ -5,14 +5,14 @@ import java.util.Arrays;
 public enum ResponseType {
   PING_RESPONSE(1);
 
-  private final int idx;
+  private final int id;
 
-  ResponseType(int idx) {
-    this.idx = idx;
+  ResponseType(int id) {
+    this.id = id;
   }
 
-  public static ResponseType fromIdx(int idx) {
-    var rt = Arrays.stream(ResponseType.values()).filter(p -> p.getIdx() == idx).findFirst();
+  public static ResponseType fromId(int idx) {
+    var rt = Arrays.stream(ResponseType.values()).filter(p -> p.getId() == idx).findFirst();
 
     if (rt.isEmpty()) {
       throw new IllegalArgumentException("no request found for idx: " + idx);
@@ -21,7 +21,7 @@ public enum ResponseType {
     return rt.get();
   }
 
-  public int getIdx() {
-    return idx;
+  public int getId() {
+    return id;
   }
 }

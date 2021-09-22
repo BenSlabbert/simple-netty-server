@@ -54,7 +54,7 @@ public class RequestDecoder extends ByteToMessageDecoder {
     // we now have the whole message, deserialize it
 
     int msgType = in.readBytes(4).readInt();
-    var requestType = RequestType.fromIdx(msgType);
+    var requestType = RequestType.fromId(msgType);
     var msgBytes = new byte[payloadLength];
 
     in.readBytes(msgBytes);

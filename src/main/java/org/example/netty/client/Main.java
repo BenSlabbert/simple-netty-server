@@ -7,9 +7,12 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import java.util.concurrent.ThreadFactory;
 import org.apache.log4j.Logger;
 import org.example.netty.client.handler.inbound.ClientHandler;
+import org.example.netty.client.handler.inbound.ResponseDecoder;
+import org.example.netty.client.handler.outbound.RequestEncoder;
 
 public class Main {
 
@@ -40,6 +43,9 @@ public class Main {
             @Override
             public void initChannel(SocketChannel ch) throws Exception {
               var p = ch.pipeline();
+              p.addLast(new RequestEncoder());
+              p.addLast(new ResponseDecoder());
+              p.addLast(new ChunkedWriteHandler());
               p.addLast(new ClientHandler());
             }
           });
