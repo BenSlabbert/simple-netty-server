@@ -64,6 +64,14 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
       default -> throw new IllegalArgumentException("unsupported type: " + request.type());
     }
 
+    //
+    //      PipedOutputStream pos = new PipedOutputStream();
+    //      OutputStreamWriter outputStreamWriter = new OutputStreamWriter(pos);
+    //    GSON.toJson("", outputStreamWriter);
+    //      PipedInputStream pis = new PipedInputStream();
+    //      pos.connect(pis);
+    //    new InputStreamReader(pis);
+
     // this call to write will call all the ChannelOutboundHandlerAdapter(s)
     ctx.writeAndFlush(
             new Response(ResponseType.PING_RESPONSE, "pong!".getBytes(StandardCharsets.UTF_8)))

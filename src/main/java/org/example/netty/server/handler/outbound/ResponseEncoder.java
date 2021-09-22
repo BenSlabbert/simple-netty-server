@@ -8,9 +8,9 @@ import java.nio.ByteBuffer;
 import org.apache.log4j.Logger;
 import org.example.netty.protocol.Response;
 
-public class MessageEncoder extends MessageToByteEncoder<Response> {
+public class ResponseEncoder extends MessageToByteEncoder<Response> {
 
-  private static final Logger logger = Logger.getLogger(MessageEncoder.class);
+  private static final Logger logger = Logger.getLogger(ResponseEncoder.class);
 
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)

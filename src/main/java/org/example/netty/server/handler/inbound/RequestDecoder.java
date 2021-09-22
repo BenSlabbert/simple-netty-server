@@ -8,9 +8,9 @@ import org.apache.log4j.Logger;
 import org.example.netty.protocol.Request;
 import org.example.netty.protocol.RequestType;
 
-public class MessageDecoder extends ByteToMessageDecoder {
+public class RequestDecoder extends ByteToMessageDecoder {
 
-  private static final Logger logger = Logger.getLogger(MessageDecoder.class);
+  private static final Logger logger = Logger.getLogger(RequestDecoder.class);
 
   @Override
   public void channelRegistered(ChannelHandlerContext ctx) throws Exception {

@@ -11,10 +11,10 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import java.util.concurrent.ThreadFactory;
 import org.example.netty.server.handler.inbound.BusinessLogicHandler;
-import org.example.netty.server.handler.inbound.MessageDecoder;
 import org.example.netty.server.handler.inbound.PreMessageDecoder;
-import org.example.netty.server.handler.outbound.MessageEncoder;
+import org.example.netty.server.handler.inbound.RequestDecoder;
 import org.example.netty.server.handler.outbound.PreEncoderHandler;
+import org.example.netty.server.handler.outbound.ResponseEncoder;
 
 public class Main {
 
@@ -47,11 +47,11 @@ public class Main {
                   // so we do not block I/O
                   var p = ch.pipeline();
                   // outbound handlers after inbound handlers
-                  p.addLast(new MessageEncoder());
+                  p.addLast(new ResponseEncoder());
                   p.addLast(new PreEncoderHandler());
 
                   p.addLast(new PreMessageDecoder());
-                  p.addLast(new MessageDecoder());
+                  p.addLast(new RequestDecoder());
 
                   // todo play with this guy, make sure he is in the right place
                   p.addLast(new ChunkedWriteHandler());
