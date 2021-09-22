@@ -1,5 +1,7 @@
 package org.example.netty.client.handler.inbound;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.netty.channel.ChannelHandlerContext;
@@ -11,6 +13,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
+import org.example.netty.protocol.CreateStoreRequest;
+import org.example.netty.protocol.CreateStoreResponse;
 import org.example.netty.protocol.PingRequest;
 import org.example.netty.protocol.PingResponse;
 import org.example.netty.protocol.Request;
@@ -27,9 +31,8 @@ public class ClientHandler extends SimpleChannelInboundHandler<Response> {
   public void channelActive(ChannelHandlerContext ctx) {
     LOG.info("channelActive");
 
-    var msgBytes =
-        GSON.toJson(new PingRequest().message("hello-initial`")).getBytes(StandardCharsets.UTF_8);
-    handleOption(ctx, ResponseOption.reply(new Request(RequestType.PING_REQUEST, msgBytes)));
+    var req = createRequest(RequestType.PING_REQUEST, new PingRequest().message("hello-initial`"));
+    handleOption(ctx, RequestOption.reply(req));
   }
 
   @Override
@@ -42,7 +45,6 @@ public class ClientHandler extends SimpleChannelInboundHandler<Response> {
   protected void channelRead0(ChannelHandlerContext ctx, Response in) {
     // this is a convenience method which discards the ByteBuf for us
     LOG.info("channelRead0");
-
     handleResponse(in).thenApply(opt -> handleOption(ctx, opt));
   }
 
@@ -52,55 +54,74 @@ public class ClientHandler extends SimpleChannelInboundHandler<Response> {
     super.exceptionCaught(ctx, cause);
   }
 
-  private CompletableFuture<ResponseOption> handleResponse(Response response) {
+  private CompletableFuture<RequestOption> handleResponse(Response response) {
     LOG.info("got response type: " + response.type());
     return switch (response.type()) {
       case PING_RESPONSE -> handlePingResponse(parseJson(response, PingResponse.TYPE_TOKEN));
-      default -> throw new IllegalArgumentException("unsupported type: " + response.type());
+      case CREATE_STORE_RESPONSE -> handleCreateStoreResponse(
+          parseJson(response, CreateStoreResponse.TYPE_TOKEN));
     };
   }
 
-  private CompletableFuture<ResponseOption> handlePingResponse(PingResponse response) {
-    LOG.info("resp: " + response.message());
+  private CompletableFuture<RequestOption> handleCreateStoreResponse(CreateStoreResponse resp) {
+    LOG.info("created store: " + resp.name());
+    LOG.info("store values: " + resp.values());
+    var responseOption = RequestOption.disconnect();
+    return completedFuture(responseOption);
+  }
+
+  private CompletableFuture<RequestOption> handlePingResponse(PingResponse resp) {
+    LOG.info("resp: " + resp.message());
 
     int i = COUNT.incrementAndGet();
-    if (i > 5) {
-      LOG.warn("closing client connection");
-      return CompletableFuture.completedFuture(ResponseOption.disconnect());
+    if (i > 1) {
+      LOG.info("creating a store");
+
+      // create a store
+      var req = new CreateStoreRequest().name("test-store");
+      return completedFuture(
+          RequestOption.reply(createRequest(RequestType.CREAT_STORE_REQUEST, req)));
     }
 
-    var pingRequest = new PingRequest().message("hello-" + i);
-    var msgBytes = GSON.toJson(pingRequest).getBytes(StandardCharsets.UTF_8);
-    var responseOption = ResponseOption.reply(new Request(RequestType.PING_REQUEST, msgBytes));
+    var req = new PingRequest().message("hello-" + i);
+    return completedFuture(RequestOption.reply(createRequest(RequestType.PING_REQUEST, req)));
+  }
 
-    return CompletableFuture.completedFuture(responseOption);
+  private Request createRequest(RequestType requestType, Object o) {
+    var json = GSON.toJson(o);
+    return new Request(requestType, json.getBytes(StandardCharsets.UTF_8));
   }
 
   private CompletableFuture<Void> handleOption(
-      ChannelHandlerContext ctx, ResponseOption responseOption) {
-    switch (responseOption.option) {
-      case REPLY -> ctx.writeAndFlush(responseOption.request);
+      ChannelHandlerContext ctx, RequestOption requestOption) {
+    switch (requestOption.option) {
+      case REPLY -> ctx.writeAndFlush(requestOption.request);
       case DO_NOTHING -> {
         /* do nothing */
       }
       case DISCONNECT -> ctx.close().addListener(channelFuture -> LOG.info("connection closed"));
     }
 
-    return CompletableFuture.completedFuture(null);
+    return completedFuture(null);
   }
 
-  record ResponseOption(Request request, Option option) {
+  private <T> T parseJson(Response request, TypeToken<T> typeToken) {
+    Reader reader = new InputStreamReader(new ByteArrayInputStream(request.payload()));
+    return GSON.fromJson(reader, typeToken.getType());
+  }
 
-    static ResponseOption reply(Request request) {
-      return new ResponseOption(request, Option.REPLY);
+  record RequestOption(Request request, Option option) {
+
+    static RequestOption reply(Request request) {
+      return new RequestOption(request, Option.REPLY);
     }
 
-    static ResponseOption doNothing() {
-      return new ResponseOption(null, Option.DO_NOTHING);
+    static RequestOption doNothing() {
+      return new RequestOption(null, Option.DO_NOTHING);
     }
 
-    static ResponseOption disconnect() {
-      return new ResponseOption(null, Option.DISCONNECT);
+    static RequestOption disconnect() {
+      return new RequestOption(null, Option.DISCONNECT);
     }
 
     enum Option {
@@ -108,10 +129,5 @@ public class ClientHandler extends SimpleChannelInboundHandler<Response> {
       DO_NOTHING,
       DISCONNECT
     }
-  }
-
-  private <T> T parseJson(Response request, TypeToken<T> typeToken) {
-    Reader reader = new InputStreamReader(new ByteArrayInputStream(request.payload()));
-    return GSON.fromJson(reader, typeToken.getType());
   }
 }

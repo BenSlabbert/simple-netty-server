@@ -1,9 +1,13 @@
 package org.example.netty.server.handler.inbound;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.supplyAsync;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisStringAsyncCommands;
+import io.lettuce.core.api.sync.RedisCommands;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import java.io.ByteArrayInputStream;
@@ -12,6 +16,8 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import org.apache.log4j.Logger;
+import org.example.netty.protocol.CreateStoreRequest;
+import org.example.netty.protocol.CreateStoreResponse;
 import org.example.netty.protocol.PingRequest;
 import org.example.netty.protocol.PingResponse;
 import org.example.netty.protocol.Request;
@@ -24,16 +30,11 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
   private static final Gson GSON = new Gson();
 
   private final RedisStringAsyncCommands<String, byte[]> async;
+  private final RedisCommands<String, byte[]> sync;
 
   public BusinessLogicHandler(StatefulRedisConnection<String, byte[]> connection) {
     this.async = connection.async();
-    //        RedisFuture<String> set = async.set("key", "value".getBytes(StandardCharsets.UTF_8));
-    //        RedisFuture<byte[]> get = async.get("key");
-    //
-    //        boolean allCompleted = LettuceFutures.awaitAll(Duration.ofMillis(500L), set, get);
-    //        LOG.info("allCompleted: " + allCompleted);
-    //        String s = set.get();
-    //        byte[] s1 = get.get();
+    this.sync = connection.sync();
   }
 
   @Override
@@ -81,26 +82,47 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
   private CompletableFuture<Response> handleRequest(Request request) {
     LOG.info("got request type: " + request.type());
     return switch (request.type()) {
-      case PING_REQUEST -> handlePing(request);
-      default -> throw new IllegalArgumentException("unsupported type: " + request.type());
+      case PING_REQUEST -> handlePing(parseJson(request, PingRequest.TYPE_TOKEN));
+      case CREAT_STORE_REQUEST -> handleCreateStore(
+          parseJson(request, CreateStoreRequest.TYPE_TOKEN));
     };
   }
 
-  private CompletableFuture<Response> handlePing(Request request) {
-    return CompletableFuture.supplyAsync(
-        () -> {
-          LOG.info("handle ping");
-          var pingRequest = parseJson(request, PingRequest.TYPE_TOKEN);
-          LOG.info("ping request message: " + pingRequest.getMessage());
+  private CompletableFuture<Response> handleCreateStore(CreateStoreRequest request) {
+    LOG.info("create store: " + request.name());
 
-          var pingResponse = new PingResponse().message("pong!");
-          var json = GSON.toJson(pingResponse);
-          return new Response(ResponseType.PING_RESPONSE, json.getBytes(StandardCharsets.UTF_8));
-        });
+    return supplyAsync(request::name)
+        .thenCompose(
+            storeName -> {
+              if (sync.hget(storeName, "dummy") == null) {
+                LOG.info("creating store");
+                var ok = sync.hset(storeName, "dummy", "value".getBytes(StandardCharsets.UTF_8));
+                LOG.info("creating store..." + ok);
+              }
+
+              return completedFuture(sync.hgetall(storeName));
+            })
+        .thenCompose(
+            storeValues -> {
+              var resp = new CreateStoreResponse().name(request.name()).values(storeValues);
+              return completedFuture(createResponse(ResponseType.CREATE_STORE_RESPONSE, resp));
+            });
+  }
+
+  private CompletableFuture<Response> handlePing(PingRequest request) {
+    LOG.info("ping request message: " + request.getMessage());
+
+    var resp = new PingResponse().message("pong!");
+    return completedFuture(createResponse(ResponseType.PING_RESPONSE, resp));
   }
 
   private <T> T parseJson(Request request, TypeToken<T> typeToken) {
     Reader reader = new InputStreamReader(new ByteArrayInputStream(request.payload()));
     return GSON.fromJson(reader, typeToken.getType());
+  }
+
+  private Response createResponse(ResponseType responseType, Object o) {
+    var json = GSON.toJson(o);
+    return new Response(responseType, json.getBytes(StandardCharsets.UTF_8));
   }
 }

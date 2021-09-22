@@ -64,12 +64,6 @@ public class RequestDecoder extends ByteToMessageDecoder {
 
     in.readBytes(msgBytes);
 
-    var req =
-        switch (requestType) {
-          case PING_REQUEST -> new Request(requestType, msgBytes);
-          default -> throw new IllegalArgumentException("unsupported request type: " + requestType);
-        };
-
-    out.add(req);
+    out.add(new Request(requestType, msgBytes));
   }
 }

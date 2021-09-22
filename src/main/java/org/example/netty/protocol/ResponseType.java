@@ -3,7 +3,8 @@ package org.example.netty.protocol;
 import java.util.Arrays;
 
 public enum ResponseType {
-  PING_RESPONSE(1);
+  PING_RESPONSE(1),
+  CREATE_STORE_RESPONSE(2);
 
   private final int id;
 

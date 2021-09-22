@@ -59,17 +59,11 @@ public class ResponseDecoder extends ByteToMessageDecoder {
     int msgType = buf.readInt();
     buf.release();
 
-    var requestType = ResponseType.fromId(msgType);
+    var responseType = ResponseType.fromId(msgType);
     var msgBytes = new byte[payloadLength];
 
     in.readBytes(msgBytes);
 
-    var req =
-        switch (requestType) {
-          case PING_RESPONSE -> new Response(requestType, msgBytes);
-          default -> throw new IllegalArgumentException("unsupported request type: " + requestType);
-        };
-
-    out.add(req);
+    out.add(new Response(responseType, msgBytes));
   }
 }

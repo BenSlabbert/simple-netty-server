@@ -3,7 +3,8 @@ package org.example.netty.protocol;
 import java.util.Arrays;
 
 public enum RequestType {
-  PING_REQUEST(1);
+  PING_REQUEST(1),
+  CREAT_STORE_REQUEST(2);
 
   private final int id;
 
