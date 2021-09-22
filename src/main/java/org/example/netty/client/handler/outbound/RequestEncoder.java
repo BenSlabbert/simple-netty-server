@@ -9,18 +9,18 @@ import org.example.netty.protocol.Request;
 
 public class RequestEncoder extends MessageToByteEncoder<Request> {
 
-  private static final Logger logger = Logger.getLogger(RequestEncoder.class);
+  private static final Logger LOG = Logger.getLogger(RequestEncoder.class);
 
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
       throws Exception {
-    logger.info("write");
+    LOG.info("write");
     super.write(ctx, msg, promise);
   }
 
   @Override
   protected void encode(ChannelHandlerContext ctx, Request msg, ByteBuf out) {
-    logger.info("encoding message");
+    LOG.info("encoding message");
 
     out.writeInt(4 + msg.payload().length);
     out.writeInt(msg.type().getId());

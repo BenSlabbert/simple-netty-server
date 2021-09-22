@@ -8,8 +8,7 @@ import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.stream.ChunkedWriteHandler;
-import java.util.concurrent.ThreadFactory;
+import org.example.netty.common.MyThreadFactory;
 import org.example.netty.server.handler.inbound.BusinessLogicHandler;
 import org.example.netty.server.handler.inbound.PreMessageDecoder;
 import org.example.netty.server.handler.inbound.RequestDecoder;
@@ -17,16 +16,6 @@ import org.example.netty.server.handler.outbound.PreEncoderHandler;
 import org.example.netty.server.handler.outbound.ResponseEncoder;
 
 public class Main {
-
-  record MyThreadFactory(String prefix) implements ThreadFactory {
-
-    @Override
-    public Thread newThread(Runnable r) {
-      var thread = new Thread(r);
-      thread.setName(prefix + "-" + thread.getId());
-      return thread;
-    }
-  }
 
   public static void main(String[] args) throws Exception {
 
@@ -54,7 +43,9 @@ public class Main {
                   p.addLast(new RequestDecoder());
 
                   // todo play with this guy, make sure he is in the right place
-                  p.addLast(new ChunkedWriteHandler());
+                  //  come back and play with ChunkedStream
+                  //  our messages are small for now
+                  //                  p.addLast(new ChunkedWriteHandler());
                   p.addLast(new BusinessLogicHandler());
                 }
               });

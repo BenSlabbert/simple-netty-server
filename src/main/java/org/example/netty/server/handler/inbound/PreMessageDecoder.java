@@ -19,43 +19,43 @@ import org.apache.log4j.Logger;
 //    ChannelHandlerContext.fireChannelUnregistered()
 public class PreMessageDecoder extends ChannelInboundHandlerAdapter {
 
-  private static final Logger logger = Logger.getLogger(PreMessageDecoder.class);
+  private static final Logger LOG = Logger.getLogger(PreMessageDecoder.class);
 
   @Override
   public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-    logger.info("client disconnected");
+    LOG.info("client disconnected");
     super.channelUnregistered(ctx);
   }
 
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-    logger.info("channelRead");
-    logger.info("pre processing request");
+    LOG.info("channelRead");
+    LOG.info("pre processing request");
     super.channelRead(ctx, msg);
   }
 
   @Override
   public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-    logger.info(
+    LOG.info(
         String.format("thread id: %d channel read complete", Thread.currentThread().getId()));
     super.channelReadComplete(ctx);
   }
 
   @Override
   public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-    logger.info(String.format("thread id: %d channel registered", Thread.currentThread().getId()));
+    LOG.info(String.format("thread id: %d channel registered", Thread.currentThread().getId()));
 
     if (false) {
-      logger.warn("do not call the next handler");
+      LOG.warn("do not call the next handler");
     } else {
-      logger.warn("call the next handler");
+      LOG.warn("call the next handler");
       super.channelRegistered(ctx);
     }
   }
 
   @Override
   public void channelActive(ChannelHandlerContext ctx) throws Exception {
-    logger.info(String.format("thread id: %d channel active", Thread.currentThread().getId()));
+    LOG.info(String.format("thread id: %d channel active", Thread.currentThread().getId()));
     super.channelActive(ctx);
   }
 }

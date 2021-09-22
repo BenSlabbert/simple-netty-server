@@ -7,26 +7,15 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.stream.ChunkedWriteHandler;
-import java.util.concurrent.ThreadFactory;
 import org.apache.log4j.Logger;
 import org.example.netty.client.handler.inbound.ClientHandler;
 import org.example.netty.client.handler.inbound.ResponseDecoder;
 import org.example.netty.client.handler.outbound.RequestEncoder;
+import org.example.netty.common.MyThreadFactory;
 
 public class Main {
 
-  private static final Logger logger = Logger.getLogger(Main.class);
-
-  record MyThreadFactory(String prefix) implements ThreadFactory {
-
-    @Override
-    public Thread newThread(Runnable r) {
-      Thread thread = new Thread(r);
-      thread.setName(prefix + "-" + thread.getId());
-      return thread;
-    }
-  }
+  private static final Logger LOG = Logger.getLogger(Main.class);
 
   public static void main(String[] args) throws Exception {
     String host = "localhost";
@@ -45,7 +34,11 @@ public class Main {
               var p = ch.pipeline();
               p.addLast(new RequestEncoder());
               p.addLast(new ResponseDecoder());
-              p.addLast(new ChunkedWriteHandler());
+
+              // todo play with this guy, make sure he is in the right place
+              //  come back and play with ChunkedStream
+              //  our messages are small for now
+              //                  p.addLast(new ChunkedWriteHandler());
               p.addLast(new ClientHandler());
             }
           });
@@ -56,7 +49,7 @@ public class Main {
       // Wait until the connection is closed.
       f.channel().closeFuture().sync();
     } finally {
-      logger.info("shutting down worker group");
+      LOG.info("shutting down worker group");
       workerGroup.shutdownGracefully();
     }
   }
