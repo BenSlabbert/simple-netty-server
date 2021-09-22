@@ -33,12 +33,6 @@ script:
   - tar -xvf $APACHE_MAVEN_BIN.tar
   - export PATH="$PATH:/tmp/$APACHE_MAVEN/bin"
   - mvn --version
-  - echo "install deps"
-  - git clone https://github.com/BenSlabbert/fm-iam.git
-  - cd fm-iam
-  - export MAVEN_OPTS="-DskipTests=true"
-  - make
-  - unset MAVEN_OPTS
   - cd "$WORK_DIR"
   - make
 
