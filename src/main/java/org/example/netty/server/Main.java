@@ -3,16 +3,17 @@ package org.example.netty.server;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import java.util.concurrent.ThreadFactory;
 import org.example.netty.server.handler.inbound.BusinessLogicHandler;
-import org.example.netty.server.handler.inbound.PreBusinessLogicHandler;
-import org.example.netty.server.handler.outbound.EncoderHandler;
+import org.example.netty.server.handler.inbound.MessageDecoder;
+import org.example.netty.server.handler.inbound.PreMessageDecoder;
+import org.example.netty.server.handler.outbound.MessageEncoder;
 import org.example.netty.server.handler.outbound.PreEncoderHandler;
 
 public class Main {
@@ -21,7 +22,7 @@ public class Main {
 
     @Override
     public Thread newThread(Runnable r) {
-      Thread thread = new Thread(r);
+      var thread = new Thread(r);
       thread.setName(prefix + "-" + thread.getId());
       return thread;
     }
@@ -29,13 +30,13 @@ public class Main {
 
   public static void main(String[] args) throws Exception {
 
-    var bossGroup = new NioEventLoopGroup(1, new MyThreadFactory("boss"));
-    var workerGroup = new NioEventLoopGroup(2, new MyThreadFactory("worker"));
+    var bossGroup = new EpollEventLoopGroup(2, new MyThreadFactory("boss"));
+    var workerGroup = new EpollEventLoopGroup(2, new MyThreadFactory("worker"));
 
     try {
       ServerBootstrap b = new ServerBootstrap();
       b.group(bossGroup, workerGroup)
-          .channel(NioServerSocketChannel.class)
+          .channel(EpollServerSocketChannel.class)
           .handler(new LoggingHandler(LogLevel.INFO))
           .childHandler(
               new ChannelInitializer<SocketChannel>() {
@@ -46,9 +47,13 @@ public class Main {
                   // so we do not block I/O
                   var p = ch.pipeline();
                   // outbound handlers after inbound handlers
-                  p.addLast(new EncoderHandler());
+                  p.addLast(new MessageEncoder());
                   p.addLast(new PreEncoderHandler());
-                  p.addLast(new PreBusinessLogicHandler());
+
+                  p.addLast(new PreMessageDecoder());
+                  p.addLast(new MessageDecoder());
+
+                  // todo play with this guy, make sure he is in the right place
                   p.addLast(new ChunkedWriteHandler());
                   p.addLast(new BusinessLogicHandler());
                 }

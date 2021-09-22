@@ -17,20 +17,132 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.8.8</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
       <version>4.1.68.Final</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-epoll</artifactId>
+      <version>4.1.68.Final</version>
+      <classifier>linux-x86_64</classifier>
+    </dependency>
+    <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
       <version>1.2.17</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.8.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>3.21.0</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-dependencies</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/lib</outputDirectory>
+              <overWriteReleases>false</overWriteReleases>
+              <overWriteSnapshots>false</overWriteSnapshots>
+              <overWriteIfNewer>true</overWriteIfNewer>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.2.4</version>
+        <executions>
+          <execution>
+            <id>build-server</id>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>org.example.netty.server.Main</mainClass>
+                </transformer>
+              </transformers>
+              <finalName>server-all-${project.version}</finalName>
+            </configuration>
+          </execution>
+          <execution>
+            <id>build-client</id>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>org.example.netty.client.Main</mainClass>
+                </transformer>
+              </transformers>
+              <finalName>client-all-${project.version}</finalName>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!--      *************************************************************************************************-->
+      <!--      *************************************************************************************************-->
+      <!--      ignore for now as we are using the shade plugin to generate 2 uber jars for the server and client-->
+      <!--      *************************************************************************************************-->
+      <!--      *************************************************************************************************-->
+      <!--      <plugin>-->
+      <!--        <groupId>org.apache.maven.plugins</groupId>-->
+      <!--        <artifactId>maven-jar-plugin</artifactId>-->
+      <!--        <version>3.2.0</version>-->
+      <!--        <configuration>-->
+      <!--          <finalName>netty-example</finalName>-->
+      <!--          <archive>-->
+      <!--            <manifest>-->
+      <!--              <addClasspath>true</addClasspath>-->
+      <!--              <classpathPrefix>lib/</classpathPrefix>-->
+      <!--              <mainClass>org.example.netty.client.Main</mainClass>-->
+      <!--            </manifest>-->
+      <!--          </archive>-->
+      <!--        </configuration>-->
+      <!--      </plugin>-->
+      <!--      *************************************************************************************************-->
+      <!--      *************************************************************************************************-->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.22.2</version>
+      </plugin>
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>

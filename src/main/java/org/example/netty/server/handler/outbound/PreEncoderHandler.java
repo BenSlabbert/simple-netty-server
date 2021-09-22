@@ -4,6 +4,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import org.apache.log4j.Logger;
+import org.example.netty.protocol.Response;
 
 public class PreEncoderHandler extends ChannelOutboundHandlerAdapter {
 
@@ -27,9 +28,10 @@ public class PreEncoderHandler extends ChannelOutboundHandlerAdapter {
       throws Exception {
     logger.info("write");
 
-    if (msg instanceof String outboundMsg) {
-      ctx.write("preEncoder modified message ->" + outboundMsg, promise);
-      return;
+    if (msg instanceof Response req) {
+      logger.info("pre processing Response: " + req);
+    } else {
+      logger.info("pre processing response");
     }
 
     super.write(ctx, msg, promise);
