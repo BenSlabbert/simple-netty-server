@@ -60,8 +60,8 @@ public class ClientHandler extends SimpleChannelInboundHandler<Response> {
       case PING_RESPONSE -> handlePingResponse(parseJson(response, PingResponse.TYPE_TOKEN));
       case CREATE_STORE_RESPONSE -> handleCreateStoreResponse(
           parseJson(response, CreateStoreResponse.TYPE_TOKEN));
-        case GET_STORE_RESPONSE -> null; // todo complete
-        case PUT_STORE_RESPONSE -> null; // todo complete
+      case GET_STORE_RESPONSE -> null; // todo complete
+      case PUT_STORE_RESPONSE -> null; // todo complete
     };
   }
 

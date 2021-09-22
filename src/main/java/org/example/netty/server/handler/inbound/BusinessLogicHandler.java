@@ -85,8 +85,8 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
       case PING_REQUEST -> handlePing(parseJson(request, PingRequest.TYPE_TOKEN));
       case CREATE_STORE_REQUEST -> handleCreateStore(
           parseJson(request, CreateStoreRequest.TYPE_TOKEN));
-        case GET_STORE_REQUEST -> null; // todo complete
-        case PUT_STORE_REQUEST -> null; // todo complete
+      case GET_STORE_REQUEST -> null; // todo complete
+      case PUT_STORE_REQUEST -> null; // todo complete
     };
   }
 
