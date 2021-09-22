@@ -50,22 +50,10 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) {
     LOG.info(String.format("thread id: %d channel read start", Thread.currentThread().getId()));
-
-    Request request = (Request) msg;
-    LOG.info("got request type: " + request.type());
-
-    switch (request.type()) {
-      case PING_REQUEST -> {
-        Reader reader = new InputStreamReader(new ByteArrayInputStream(request.payload()));
-        PingRequest pingRequest = GSON.fromJson(reader, new TypeToken<PingRequest>() {}.getType());
-        LOG.info("ping request message: " + pingRequest.getMessage());
-      }
-      default -> throw new IllegalArgumentException("unsupported type: " + request.type());
-    }
+    var resp = handleRequest((Request) msg);
 
     // this call to write will call all the ChannelOutboundHandlerAdapter(s)
-    ctx.writeAndFlush(
-            new Response(ResponseType.PING_RESPONSE, "pong!".getBytes(StandardCharsets.UTF_8)))
+    ctx.writeAndFlush(resp)
         .addListener(
             new ChannelFutureListener() {
               @Override
@@ -73,27 +61,26 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
                 LOG.info("finished write to client");
               }
             });
-    //    add back ChunkedWriteHandler to handle the input stream
-    //    var chunkedStream =
-    //        new ChunkedStream(
-    //            new ByteArrayInputStream(
-    //                "this is a message from an input stream\n".getBytes(StandardCharsets.UTF_8)));
-    //
-    //    ctx.write("server says hello\n");
-    //    ctx.write(chunkedStream);
-    //    ChannelFuture future = ctx.writeAndFlush("\n");
-    //    future.addListener(
-    //        new ChannelFutureListener() {
-    //          @Override
-    //          public void operationComplete(ChannelFuture channelFuture) throws Exception {
-    //            logger.info("finished write to client, write stream");
-    //          }
-    //        });
   }
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
     cause.printStackTrace();
     ctx.close();
+  }
+
+  private Response handleRequest(Request request) {
+    LOG.info("got request type: " + request.type());
+    return switch (request.type()) {
+      case PING_REQUEST -> handlePing(request);
+      default -> throw new IllegalArgumentException("unsupported type: " + request.type());
+    };
+  }
+
+  private Response handlePing(Request request) {
+    Reader reader = new InputStreamReader(new ByteArrayInputStream(request.payload()));
+    PingRequest pingRequest = GSON.fromJson(reader, new TypeToken<PingRequest>() {}.getType());
+    LOG.info("ping request message: " + pingRequest.getMessage());
+    return new Response(ResponseType.PING_RESPONSE, "pong!".getBytes(StandardCharsets.UTF_8));
   }
 }
