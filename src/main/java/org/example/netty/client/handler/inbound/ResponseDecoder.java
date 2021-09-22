@@ -32,8 +32,7 @@ public class ResponseDecoder extends ByteToMessageDecoder {
 
   @Override
   public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-    LOG.info(
-        String.format("thread id: %d channel read complete", Thread.currentThread().getId()));
+    LOG.info(String.format("thread id: %d channel read complete", Thread.currentThread().getId()));
     super.channelReadComplete(ctx);
   }
 

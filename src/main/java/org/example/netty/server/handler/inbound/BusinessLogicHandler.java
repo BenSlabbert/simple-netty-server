@@ -41,8 +41,7 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
 
   @Override
   public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-    LOG.info(
-        String.format("thread id: %d channel read complete", Thread.currentThread().getId()));
+    LOG.info(String.format("thread id: %d channel read complete", Thread.currentThread().getId()));
     // come here when the decoder returns without adding to List<Object> out
     // i.e. channel has completed its read, there may be more data coming
     super.channelReadComplete(ctx);
