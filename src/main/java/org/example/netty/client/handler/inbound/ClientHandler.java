@@ -28,9 +28,7 @@ public class ClientHandler extends SimpleChannelInboundHandler<Response> {
     LOG.info("channelActive");
 
     var msgBytes =
-        new Gson()
-            .toJson(new PingRequest().message("hello-initial`"))
-            .getBytes(StandardCharsets.UTF_8);
+        GSON.toJson(new PingRequest().message("hello-initial`")).getBytes(StandardCharsets.UTF_8);
     handleOption(ctx, ResponseOption.reply(new Request(RequestType.PING_REQUEST, msgBytes)));
   }
 
@@ -72,8 +70,9 @@ public class ClientHandler extends SimpleChannelInboundHandler<Response> {
     }
 
     var pingRequest = new PingRequest().message("hello-" + i);
-    var msgBytes = new Gson().toJson(pingRequest).getBytes(StandardCharsets.UTF_8);
+    var msgBytes = GSON.toJson(pingRequest).getBytes(StandardCharsets.UTF_8);
     var responseOption = ResponseOption.reply(new Request(RequestType.PING_REQUEST, msgBytes));
+
     return CompletableFuture.completedFuture(responseOption);
   }
 
@@ -111,8 +110,8 @@ public class ClientHandler extends SimpleChannelInboundHandler<Response> {
     }
   }
 
-  private <T> T parseJson(Response request, TypeToken<T> tTypeToken) {
+  private <T> T parseJson(Response request, TypeToken<T> typeToken) {
     Reader reader = new InputStreamReader(new ByteArrayInputStream(request.payload()));
-    return GSON.fromJson(reader, tTypeToken.getType());
+    return GSON.fromJson(reader, typeToken.getType());
   }
 }

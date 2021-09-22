@@ -99,8 +99,8 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
         });
   }
 
-  private <T> T parseJson(Request request, TypeToken<T> tTypeToken) {
+  private <T> T parseJson(Request request, TypeToken<T> typeToken) {
     Reader reader = new InputStreamReader(new ByteArrayInputStream(request.payload()));
-    return GSON.fromJson(reader, tTypeToken.getType());
+    return GSON.fromJson(reader, typeToken.getType());
   }
 }
