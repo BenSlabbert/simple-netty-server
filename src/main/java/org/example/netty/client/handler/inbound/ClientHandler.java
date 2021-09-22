@@ -60,6 +60,8 @@ public class ClientHandler extends SimpleChannelInboundHandler<Response> {
       case PING_RESPONSE -> handlePingResponse(parseJson(response, PingResponse.TYPE_TOKEN));
       case CREATE_STORE_RESPONSE -> handleCreateStoreResponse(
           parseJson(response, CreateStoreResponse.TYPE_TOKEN));
+        case GET_STORE_RESPONSE -> null; // todo complete
+        case PUT_STORE_RESPONSE -> null; // todo complete
     };
   }
 
@@ -80,7 +82,7 @@ public class ClientHandler extends SimpleChannelInboundHandler<Response> {
       // create a store
       var req = new CreateStoreRequest().name("test-store");
       return completedFuture(
-          RequestOption.reply(createRequest(RequestType.CREAT_STORE_REQUEST, req)));
+          RequestOption.reply(createRequest(RequestType.CREATE_STORE_REQUEST, req)));
     }
 
     var req = new PingRequest().message("hello-" + i);

@@ -4,7 +4,9 @@ import java.util.Arrays;
 
 public enum ResponseType {
   PING_RESPONSE(1),
-  CREATE_STORE_RESPONSE(2);
+  CREATE_STORE_RESPONSE(2),
+  GET_STORE_RESPONSE(3),
+  PUT_STORE_RESPONSE(4);
 
   private final int id;
 

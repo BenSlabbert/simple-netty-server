@@ -4,7 +4,9 @@ import java.util.Arrays;
 
 public enum RequestType {
   PING_REQUEST(1),
-  CREAT_STORE_REQUEST(2);
+  CREATE_STORE_REQUEST(2),
+  GET_STORE_REQUEST(3),
+  PUT_STORE_REQUEST(4);
 
   private final int id;
 
