@@ -7,6 +7,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisStringAsyncCommands;
+import io.lettuce.core.api.reactive.RedisReactiveCommands;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -23,6 +24,12 @@ import org.example.netty.protocol.PingResponse;
 import org.example.netty.protocol.Request;
 import org.example.netty.protocol.Response;
 import org.example.netty.protocol.ResponseType;
+import org.example.netty.protocol.StoreDeleteRequest;
+import org.example.netty.protocol.StoreDeleteResponse;
+import org.example.netty.protocol.StoreGetRequest;
+import org.example.netty.protocol.StoreGetResponse;
+import org.example.netty.protocol.StorePutRequest;
+import org.example.netty.protocol.StorePutResponse;
 
 public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
 
@@ -30,11 +37,13 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
   private static final Gson GSON = new Gson();
 
   private final RedisStringAsyncCommands<String, byte[]> async;
+  private final RedisReactiveCommands<String, byte[]> reactive;
   private final RedisCommands<String, byte[]> sync;
 
   public BusinessLogicHandler(StatefulRedisConnection<String, byte[]> connection) {
     this.async = connection.async();
     this.sync = connection.sync();
+    this.reactive = connection.reactive();
   }
 
   @Override
@@ -82,15 +91,58 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
   private CompletableFuture<Response> handleRequest(Request request) {
     LOG.info("got request type: " + request.type());
     return switch (request.type()) {
-      case PING_REQUEST -> handlePing(parseJson(request, PingRequest.TYPE_TOKEN));
-      case CREATE_STORE_REQUEST -> handleCreateStore(
-          parseJson(request, CreateStoreRequest.TYPE_TOKEN));
-      case GET_STORE_REQUEST -> null; // todo complete
-      case PUT_STORE_REQUEST -> null; // todo complete
+      case PING_REQUEST -> ping(parseJson(request, PingRequest.TYPE_TOKEN));
+      case CREATE_STORE_REQUEST -> createStore(parseJson(request, CreateStoreRequest.TYPE_TOKEN));
+      case GET_STORE_REQUEST -> getStore(parseJson(request, StoreGetRequest.TYPE_TOKEN));
+      case PUT_STORE_REQUEST -> putStore(parseJson(request, StorePutRequest.TYPE_TOKEN));
+      case DELETE_STORE_REQUEST -> deleteStore(parseJson(request, StoreDeleteRequest.TYPE_TOKEN));
     };
   }
 
-  private CompletableFuture<Response> handleCreateStore(CreateStoreRequest request) {
+  private CompletableFuture<Response> deleteStore(StoreDeleteRequest request) {
+    return supplyAsync(() -> request)
+        .thenCompose(
+            req -> {
+              long cnt = 0L;
+              if (req.all()) {
+                cnt = sync.hdel(req.name());
+                LOG.info("keys deleted: " + cnt);
+              } else {
+                cnt = sync.hdel(req.name(), req.key());
+                LOG.info("keys deleted: " + cnt);
+              }
+
+              return completedFuture(
+                  createResponse(
+                      ResponseType.PUT_STORE_RESPONSE, new StoreDeleteResponse().ok(cnt > 0L)));
+            });
+  }
+
+  private CompletableFuture<Response> putStore(StorePutRequest request) {
+    return supplyAsync(() -> request)
+        .thenCompose(
+            storePutRequest ->
+                completedFuture(
+                    sync.hset(
+                        storePutRequest.name(), storePutRequest.key(), storePutRequest.value())))
+        .thenCompose(
+            ok ->
+                completedFuture(
+                    createResponse(
+                        ResponseType.PUT_STORE_RESPONSE, new StorePutResponse().ok(ok))));
+  }
+
+  private CompletableFuture<Response> getStore(StoreGetRequest request) {
+    return CompletableFuture.supplyAsync(request::name)
+        .thenCompose(storeName -> completedFuture(sync.hgetall(storeName)))
+        .thenCompose(
+            storeValues -> {
+              var resp = new StoreGetResponse().values(storeValues);
+              return completedFuture(createResponse(ResponseType.GET_STORE_RESPONSE, resp));
+            });
+  }
+
+  private CompletableFuture<Response> createStore(CreateStoreRequest request) {
     LOG.info("create store: " + request.name());
 
     return supplyAsync(request::name)
@@ -111,7 +163,7 @@ public class BusinessLogicHandler extends ChannelInboundHandlerAdapter {
             });
   }
 
-  private CompletableFuture<Response> handlePing(PingRequest request) {
+  private CompletableFuture<Response> ping(PingRequest request) {
     LOG.info("ping request message: " + request.getMessage());
 
     var resp = new PingResponse().message("pong!");

@@ -2,13 +2,13 @@ package org.example.netty.protocol;
 
 import com.google.gson.reflect.TypeToken;
 
-public class StorePutResponse {
+public class StoreDeleteResponse {
 
-  public static final TypeToken<StorePutResponse> TYPE_TOKEN = new TypeToken<>() {};
+  public static final TypeToken<StoreDeleteResponse> TYPE_TOKEN = new TypeToken<>() {};
 
   private boolean ok;
 
-  public StorePutResponse ok(boolean ok) {
+  public StoreDeleteResponse ok(boolean ok) {
     this.ok = ok;
     return this;
   }

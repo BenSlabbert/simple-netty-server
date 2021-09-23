@@ -57,22 +57,23 @@ public class ClientHandler extends SimpleChannelInboundHandler<Response> {
   private CompletableFuture<RequestOption> handleResponse(Response response) {
     LOG.info("got response type: " + response.type());
     return switch (response.type()) {
-      case PING_RESPONSE -> handlePingResponse(parseJson(response, PingResponse.TYPE_TOKEN));
-      case CREATE_STORE_RESPONSE -> handleCreateStoreResponse(
+      case PING_RESPONSE -> ping(parseJson(response, PingResponse.TYPE_TOKEN));
+      case CREATE_STORE_RESPONSE -> createStore(
           parseJson(response, CreateStoreResponse.TYPE_TOKEN));
-      case GET_STORE_RESPONSE -> null; // todo complete
-      case PUT_STORE_RESPONSE -> null; // todo complete
+      case GET_STORE_RESPONSE -> completedFuture(RequestOption.doNothing());
+      case PUT_STORE_RESPONSE -> completedFuture(RequestOption.doNothing());
+      case DELETE_STORE_RESPONSE -> completedFuture(RequestOption.doNothing());
     };
   }
 
-  private CompletableFuture<RequestOption> handleCreateStoreResponse(CreateStoreResponse resp) {
+  private CompletableFuture<RequestOption> createStore(CreateStoreResponse resp) {
     LOG.info("created store: " + resp.name());
     LOG.info("store values: " + resp.values());
     var responseOption = RequestOption.disconnect();
     return completedFuture(responseOption);
   }
 
-  private CompletableFuture<RequestOption> handlePingResponse(PingResponse resp) {
+  private CompletableFuture<RequestOption> ping(PingResponse resp) {
     LOG.info("resp: " + resp.message());
 
     int i = COUNT.incrementAndGet();
